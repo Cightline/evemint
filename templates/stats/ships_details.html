@@ -11,7 +11,7 @@ $(document).ready( function() {
 
 <div class="row">
     <div class="col-md-12">
-        <h4><font face='monospace'>{{ ship_name }}<br><small> typeID: {{ ship_id }}</small></h4></font><br>
+        <h4><font face='monospace'>{{ ship_name }} ({{ filter_option }}) <br><small> typeID: {{ ship_id }}</small></h4></font><br>
             {# We just need one "date" #}
             <table class="display" cellspacing="0" width="100%" id="table">
                 <thead>
@@ -32,17 +32,17 @@ $(document).ready( function() {
                         {% set character = row['characterID'] %}
                         {% set corp_id   = row['corporationID'] %}
 
-                        {% if filter_option %}
+                        {% if filter_option == 'used' %}
                         <td> {{ row['killTime'] }}          </td>
-                        <td> {{ row['allianceID'] | alliance_name_from_id       }}          </td>
-                        <td> {{ row['corporationName'] }}   </td>
+                        <td> <a href="http://evemaps.dotlan.net/alliance/{{ row['allianceID'] }}">{{ row['allianceID'] | alliance_name_from_id }}<a></td>
+                        <td> <a href="http://evemaps.dotlan.net/corp/{{ row['corporationName'] }}">{{ row['corporationName'] }}</a></td>
                         <td> <a href="{{ url_for('stats_ships', filter_option=filter_option, coalition=coalition, character=character) }}">{{ character }}</a>  </td>
                         <td> <a href="https://zkillboard.com/kill/{{ row['killID'] }}">{{ row['killID'] }}</a> </td>
 
-                        {% else %}
+                        {% elif filter_option == 'lost' %}
                         <td> {{ row['killTime'] }}          </td>
-                        <td> {{ row['allianceID'] | alliance_name_from_id        }}          </td>
-                        <td> {{ row['corporationName'] }}   </td>
+                        <td> <a href="http://evemaps.dotlan.net/alliance/{{ row['allianceID'] }}"> {{ row['allianceID']| alliance_name_from_id  }}</a></td>
+                        <td> <a href="http://evemaps.dotlan.net/corp/{{ row['corporationName'] }}">{{ row['corporationName'] }}</a></td>
                         <td> <a href="{{ url_for('stats_ships', filter_option=filter_option, coalition=coalition, character=character) }}">{{ character }}</a>  </td>
                         <td> <a href="https://zkillboard.com/kill/{{ row['killID'] }}">{{ row['killID'] }}</a> </td>
                         {% endif %}

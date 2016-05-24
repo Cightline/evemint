@@ -32,7 +32,7 @@ pi        = PiUtils(app.config, utils)
 losses    = LossesUtils(app.config)
 alliances = AllianceUtils(app.config)
 cache     = Cache(app, app.config)
-
+logging.basicConfig(filename='%s/log' % (config['general']['base_dir']), level=logging.DEBUG)
 
 @cache.memoize()
 def character_name_from_id(id_):
@@ -77,7 +77,7 @@ def stats_pi():
 def stats_ships_details():
     days = 20
     character_id = None
-    filter_options = ['used','lost','killed']
+    filter_options = ['used','lost']
 
     if 'days' in request.args:
         try:
@@ -104,7 +104,7 @@ def stats_ships_details():
                 return error('unable to find character')
 
 
-    filter_option = request.args.get('kills')
+    filter_option = request.args.get('filter_option')
     coalition   = request.args.get('coalition')
 
     if filter_option not in filter_options:
@@ -147,7 +147,7 @@ def stats_ships():
     total_ships_lost = 0
     ships_lost = {}
     ship_id      = 0
-    filter_options = ['used','lost','killed']
+    filter_options = ['used','lost']
 
     if 'days' in request.args:
         try:
@@ -174,7 +174,7 @@ def stats_ships():
                 return error('unable to find character')
 
 
-    filter_option = request.args.get('kills')
+    filter_option = request.args.get('filter_option')
     coalition     = request.args.get('coalition')
     days_ago      = current_time - datetime.timedelta(days=days)
 
@@ -207,7 +207,12 @@ def stats_ships():
         days_stored = None
 
     for ship in query:
-        ship_name = utils.lookup_typename(ship[0]) or 'N/A'
+
+        if ship[0] == 0:
+            continue
+
+        ship_name = utils.lookup_typename(ship[0])
+
         total_ships_lost += ship[1]
 
         if ship_name not in ships_lost:

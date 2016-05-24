@@ -3,6 +3,8 @@ import json
 import datetime
 import requests
 
+from dateutil.relativedelta import relativedelta
+
 from sqlalchemy import *
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.exc import IntegrityError
@@ -90,74 +92,81 @@ class Command():
         alliance_ids        = []
         alliances_requested = []
         time_format = '%Y-%m-%d %H:%M:%S'
+        start_time  = (datetime.datetime.now() + relativedelta(months=-1)).strftime('%Y%m%d%H%I')
 
         # add alliance ids from coalitions to alliance_ids
         for coalition in self.config['coalitions']:
             alliance_ids.extend(self.config['coalitions'][coalition])
 
-        start_page = 0
 
 
-        for count in range(start_page, self.args.losses):
-            print('page %s of %s' % (count, self.args.losses))
+        
 
-            for alliance_id in alliance_ids:
+        for alliance_id in alliance_ids:
 
-                # what?
-                if alliance_id in alliances_requested:
-                    continue 
+            # what?
+            if alliance_id in alliances_requested:
+                continue 
 
-                alliances_requested.append(alliance_id)
-                kb_url = 'https://zkillboard.com/api/kills/allianceID/%s/page/%s' % (alliance_id, count)
+            alliances_requested.append(alliance_id)
+            kb_url = 'https://zkillboard.com/api/kills/allianceID/%s/startTime/%s' % (alliance_id, start_time)
 
-                # USE REQUESTS JSON
-                data = json.loads(requests.get(kb_url).text)
+            # USE REQUESTS JSON
+            page = requests.get(kb_url)
+            data = json.loads(page.text)
 
+            print('Working on: %s' % (alliance_id))
 
-                for row in data:
-                    print('Alliance: %s' % (alliance_id))
-                    kill_time   = datetime.datetime.strptime(row['killTime'], time_format)
-                    kill_id     = row['killID']
-
-                    # See if the killID already exists in the database
-                    query = losses.session.query(losses.base.classes.kills).filter_by(killID=kill_id).first()
-
-                    if query:
-                        print('killID already exists, skipping...')
-                        continue
-
-                    # The kill itself
-                    kill = losses.base.classes.kills(killID=kill_id,
-                                                 shipTypeID=row['victim']['shipTypeID'],
-                                                 killTime=kill_time,
-                                                 characterID=row['victim']['characterID'],
-                                                 corporationID=row['victim']['corporationID'],
-                                                 corporationName=row['victim']['corporationName'],
-                                                 allianceID=row['victim']['allianceID'])
+            # Example
+            #{"characterID":926924867,"characterName":"clavo oxidado",
+            #"corporationID":98390683,"corporationName":"Hogyoku","allianceID":1354830081,
+            #"allianceName":"Goonswarm Federation","factionID":0,"factionName":"","securityStatus":-0.9,"damageDone":0,"finalBlow":0,"weaponTypeID":5439,"shipTypeID":0}
+            # https://zkillboard.com/kill/54204593/
 
 
-                    # Attach the items lost to the kill 
-                    for line in row['items']:
-                        item = losses.base.classes.items_lost(typeID=line['typeID'])
-                        kill.items_lost_collection.append(item)
+            for row in data:
+                kill_time   = datetime.datetime.strptime(row['killTime'], time_format)
+                kill_id     = row['killID']
 
-            
-                    for line in row['attackers']:
-                        attacker = losses.base.classes.attacker(weaponTypeID=line['weaponTypeID'],
-                                                            allianceID=line['allianceID'],
-                                                            corporationName=line['corporationName'],
-                                                            shipTypeID=line['shipTypeID'],
-                                                            characterName=line['characterName'],
-                                                            characterID=line['characterID'],
-                                                            allianceName=line['allianceName'])
-                                                            
+                # See if the killID already exists in the database
+                query = losses.session.query(losses.base.classes.kills).filter_by(killID=kill_id).first()
 
-                        kill.attacker_collection.append(attacker)
+                if query:
+                    print('killID already exists, skipping...')
+                    continue
+
+                # The kill itself
+                kill = losses.base.classes.kills(killID=kill_id,
+                                             shipTypeID=row['victim']['shipTypeID'],
+                                             killTime=kill_time,
+                                             characterID=row['victim']['characterID'],
+                                             corporationID=row['victim']['corporationID'],
+                                             corporationName=row['victim']['corporationName'],
+                                             allianceID=row['victim']['allianceID'])
+
+
+                # Attach the items lost to the kill 
+                for line in row['items']:
+                    item = losses.base.classes.items_lost(typeID=line['typeID'])
+                    kill.items_lost_collection.append(item)
+
+        
+                for line in row['attackers']:
+                    attacker = losses.base.classes.attacker(weaponTypeID=line['weaponTypeID'],
+                                                        allianceID=line['allianceID'],
+                                                        corporationName=line['corporationName'],
+                                                        shipTypeID=line['shipTypeID'],
+                                                        characterName=line['characterName'],
+                                                        characterID=line['characterID'],
+                                                        allianceName=line['allianceName'])
+                                                        
+
+                    kill.attacker_collection.append(attacker)
 
 
 
-                    losses.session.add(kill)
-                    losses.session.commit()
+                losses.session.add(kill)
+                losses.session.commit()
 
 
     def update_alliances(self):

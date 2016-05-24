@@ -58,7 +58,6 @@ class LossesUtils():
                         self.classes.attacker.allianceID.in_(alliance_ids)).all()
 
 
-
         if characterID and shipTypeID:
             return self.db.session.query(self.classes.kills).filter(self.classes.kills.killTime > days_ago).filter_by(characterID=characterID, shipTypeID=shipTypeID).filter(
                     self.classes.kills.allianceID.in_(alliance_ids)).all()

@@ -22,4 +22,7 @@ class AllianceUtils():
     def alliance_name_from_id(self, id):
         q = self.session.query(self.base.classes.alliances).filter_by(id=id).first()
 
-        return q.name or None
+        if q:
+            return q.name
+
+        return False
